@@ -133,10 +133,24 @@ jobs:
           node-version: '18'
       - name: Ensure Docker and docker-compose plugin
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin
-          docker --version
-          docker compose version
+          echo "Setting up Docker buildx and QEMU"
+          # Use the GitHub runner's Docker and ensure buildx/qemu are available
+          # Fallback to installing docker-compose plugin only if missing
+          docker --version || true
+          if ! command -v docker-buildx >/dev/null 2>&1; then
+            echo "buildx not found, will rely on setup-buildx-action"
+          fi
+          if ! docker compose version >/dev/null 2>&1; then
+            echo "docker compose not available; attempting to install plugin"
+            sudo apt-get update
+            sudo apt-get install -y docker-compose-plugin || true
+          fi
+          docker --version || true
+          docker compose version || true
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v2
       - name: Make scripts executable
         run: |
           chmod +x ./scripts/run_e2e_compose.sh ./scripts/docker_up.sh || true
