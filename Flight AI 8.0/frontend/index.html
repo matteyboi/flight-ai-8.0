@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flight AI — Frontend Demo</title>
+  <style>body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:24px}button{margin:6px}</style>
+</head>
+<body>
+  <h1>Flight AI — Frontend Demo</h1>
+
+  <section>
+    <h2>Get Syllabus</h2>
+    <button id="btn-syllabus">Fetch Syllabus</button>
+    <pre id="out-syllabus" style="background:#f6f8fa;padding:12px;border-radius:6px"></pre>
+  </section>
+
+  <section>
+    <h2>Generate Lesson</h2>
+    <input id="topic" placeholder="Topic (e.g. navigation)" />
+    <button id="btn-lesson">Generate</button>
+    <pre id="out-lesson" style="background:#f6f8fa;padding:12px;border-radius:6px"></pre>
+  </section>
+
+  <script>
+    const API_BASE = 'http://localhost:5051';
+
+    document.getElementById('btn-syllabus').addEventListener('click', async () => {
+      const out = document.getElementById('out-syllabus');
+      out.textContent = 'Loading...';
+      try {
+        const r = await fetch(`${API_BASE}/syllabus`);
+        const j = await r.json();
+        out.textContent = JSON.stringify(j, null, 2);
+      } catch (e) {
+        out.textContent = 'Error: '+e.message;
+      }
+    });
+
+    document.getElementById('btn-lesson').addEventListener('click', async () => {
+      const out = document.getElementById('out-lesson');
+      const topic = document.getElementById('topic').value || 'unknown';
+      out.textContent = 'Loading...';
+      try {
+        const r = await fetch(`${API_BASE}/lesson`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({topic})
+        });
+        const j = await r.json();
+        // If the backend returns a `lesson` string, display it plainly.
+        if (j && typeof j.lesson === 'string') {
+          out.textContent = j.lesson;
+        } else {
+          out.textContent = JSON.stringify(j, null, 2);
+        }
+      } catch (e) {
+        out.textContent = 'Error: '+e.message;
+      }
+    });
+  </script>
+
+  <hr />
+  <section>
+    <h2>Admin — View Progress</h2>
+    <label>Limit: <input id="admin-limit" type="number" value="20" style="width:80px" /></label>
+    <label style="margin-left:12px">Student: <input id="admin-student" placeholder="student id" style="width:140px" /></label>
+    <label style="margin-left:12px">User: <input id="admin-user" placeholder="admin" style="width:120px" /></label>
+    <label style="margin-left:8px">Pass: <input id="admin-pass" type="password" placeholder="password" style="width:120px" /></label>
+      <label style="margin-left:8px">Token: <input id="admin-token" placeholder="(optional) bearer token" style="width:200px" /></label>
+    <button id="btn-admin">Fetch Progress</button>
+    <div style="margin-top:8px">
+      <button id="btn-prev">Prev</button>
+      <button id="btn-next">Next</button>
+      <span id="admin-page-info" style="margin-left:8px"></span>
+    </div>
+    <div style="margin-top:8px">
+      <button id="btn-export">Export CSV</button>
+    </div>
+    <hr />
+    <section>
+      <h2>Admin — Audit Log</h2>
+      <label>Action: <input id="audit-action" placeholder="delete" style="width:120px" /></label>
+      <label style="margin-left:12px">Admin: <input id="audit-admin" placeholder="admin" style="width:120px" /></label>
+      <button id="btn-audit">Fetch Audit</button>
+      <button id="btn-audit-export">Export Audit CSV</button>
+      <pre id="out-audit" style="background:#f6f8fa;padding:12px;border-radius:6px;max-height:300px;overflow:auto"></pre>
+    </section>
+    <pre id="out-admin" style="background:#f6f8fa;padding:12px;border-radius:6px;max-height:300px;overflow:auto"></pre>
+  </section>
+
+  <section style="margin-top:12px">
+    <h3>Delete Progress Entry</h3>
+    <label>ID: <input id="admin-delete-id" placeholder="entry id" style="width:120px" /></label>
+    <button id="btn-delete">Delete</button>
+    <pre id="out-delete" style="background:#fff3f3;padding:12px;border-radius:6px;max-height:120px;overflow:auto"></pre>
+  </section>
+
+  <script>
+    let adminOffset = 0;
+    function updatePageInfo(total, offset, limit){
+      const page = Math.floor(offset/limit)+1;
+      const pages = Math.max(1, Math.ceil(total/limit));
+      document.getElementById('admin-page-info').textContent = `Page ${page} / ${pages}`;
+    }
+
+    document.getElementById('btn-prev').addEventListener('click', ()=>{
+      const limit = parseInt(document.getElementById('admin-limit').value||20);
+      adminOffset = Math.max(0, adminOffset - limit);
+      document.getElementById('btn-admin').click();
+    });
+    document.getElementById('btn-next').addEventListener('click', ()=>{
+      const limit = parseInt(document.getElementById('admin-limit').value||20);
+      adminOffset = adminOffset + limit;
+      document.getElementById('btn-admin').click();
+    });
+
+    document.getElementById('btn-admin').addEventListener('click', async () => {
+      const out = document.getElementById('out-admin');
+      const limit = document.getElementById('admin-limit').value || 100;
+      const student = document.getElementById('admin-student').value || '';
+      out.textContent = 'Loading...';
+      try {
+        const user = document.getElementById('admin-user').value || '';
+        const pass = document.getElementById('admin-pass').value || '';
+        const headers = {};
+          const token = document.getElementById('admin-token').value || '';
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+          else if (user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+        let qs = `?limit=${encodeURIComponent(limit)}&offset=${adminOffset}`;
+        if (student) qs += `&student_id=${encodeURIComponent(student)}`;
+        const r = await fetch(`${API_BASE}/admin/progress${qs}`, { headers });
+        const j = await r.json();
+        out.textContent = JSON.stringify(j, null, 2);
+        updatePageInfo(j.total||0, j.offset||0, j.limit||limit);
+      } catch (e) {
+        out.textContent = 'Error: '+e.message;
+      }
+    });
+
+    document.getElementById('btn-export').addEventListener('click', async () => {
+      const limit = document.getElementById('admin-limit').value || 100;
+      const student = document.getElementById('admin-student').value || '';
+      const user = document.getElementById('admin-user').value || '';
+      const pass = document.getElementById('admin-pass').value || '';
+      const headers = {};
+        const token = document.getElementById('admin-token').value || '';
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        else if (user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+      let qs = `?limit=${encodeURIComponent(limit)}&offset=${adminOffset}`;
+      if (student) qs += `&student_id=${encodeURIComponent(student)}`;
+      try {
+        const r = await fetch(`${API_BASE}/admin/progress.csv${qs}`, { headers });
+        if (!r.ok) throw new Error('Export failed: '+r.status);
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'progress.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Export error: '+e.message);
+      }
+    });
+
+    document.getElementById('btn-audit').addEventListener('click', async () => {
+      const action = document.getElementById('audit-action').value || '';
+      const admin = document.getElementById('audit-admin').value || '';
+      const limit = document.getElementById('admin-limit').value || 100;
+      const user = document.getElementById('admin-user').value || '';
+      const pass = document.getElementById('admin-pass').value || '';
+      const headers = {};
+        const token = document.getElementById('admin-token').value || '';
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        else if (user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+      let qs = `?limit=${encodeURIComponent(limit)}&offset=${adminOffset}`;
+      if (action) qs += `&action=${encodeURIComponent(action)}`;
+      if (admin) qs += `&admin_user=${encodeURIComponent(admin)}`;
+      const out = document.getElementById('out-audit');
+      out.textContent = 'Loading...';
+      try {
+        const r = await fetch(`${API_BASE}/admin/audit${qs}`, { headers });
+        const j = await r.json();
+        out.textContent = JSON.stringify(j, null, 2);
+      } catch (e) {
+        out.textContent = 'Error: '+e.message;
+      }
+    });
+
+    document.getElementById('btn-audit-export').addEventListener('click', async () => {
+      const action = document.getElementById('audit-action').value || '';
+      const admin = document.getElementById('audit-admin').value || '';
+      const limit = document.getElementById('admin-limit').value || 100;
+      const user = document.getElementById('admin-user').value || '';
+      const pass = document.getElementById('admin-pass').value || '';
+      const headers = {};
+        const token = document.getElementById('admin-token').value || '';
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        else if (user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+      let qs = `?limit=${encodeURIComponent(limit)}&offset=${adminOffset}`;
+      if (action) qs += `&action=${encodeURIComponent(action)}`;
+      if (admin) qs += `&admin_user=${encodeURIComponent(admin)}`;
+      try {
+        const r = await fetch(`${API_BASE}/admin/audit.csv${qs}`, { headers });
+        if (!r.ok) throw new Error('Export failed: '+r.status);
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'audit.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Export error: '+e.message);
+      }
+    });
+
+    document.getElementById('btn-delete').addEventListener('click', async () => {
+      const out = document.getElementById('out-delete');
+      const id = document.getElementById('admin-delete-id').value;
+      if (!id) { out.textContent = 'Enter an id'; return; }
+      out.textContent = 'Deleting...';
+      try {
+        const user = document.getElementById('admin-user').value || '';
+        const pass = document.getElementById('admin-pass').value || '';
+        const headers = {};
+        if (user || pass) headers['Authorization'] = 'Basic ' + btoa(`${user}:${pass}`);
+        const r = await fetch(`${API_BASE}/admin/progress/${encodeURIComponent(id)}`, { method: 'DELETE', headers });
+        const j = await r.json();
+        out.textContent = JSON.stringify(j, null, 2);
+      } catch (e) {
+        out.textContent = 'Error: '+e.message;
+      }
+    });
+  </script>
+</body>
+</html>

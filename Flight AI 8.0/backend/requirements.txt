@@ -1,0 +1,11 @@
+# Backend requirements
+flask
+openai
+sqlalchemy
+
+flask-cors
+gunicorn
+python-dotenv
+flask-limiter
+flask-talisman
+redis>=4.0

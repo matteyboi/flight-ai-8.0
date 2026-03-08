@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5051:5050"
+    environment:
+      - PORT=5050
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-password}
+      - RATELIMIT_STORAGE_URL=redis://redis:6379/0
+    volumes:
+      - ./backend:/app:cached
+      - ./backend/progress.db:/app/progress.db
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/syllabus"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  frontend:
+    image: nginx:stable
+    ports:
+      - "8001:80"
+    volumes:
+      - ./frontend/react-app/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+
+volumes:
+  redis-data:
+    name: flight_ai_redis_data
