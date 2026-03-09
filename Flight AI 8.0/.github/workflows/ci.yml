@@ -51,7 +51,7 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend/react-app
         run: |
-          npm install
+          npm ci
       - name: Build frontend
         working-directory: frontend/react-app
         run: |
@@ -97,7 +97,7 @@ jobs:
       - name: Install frontend deps and Playwright
         working-directory: frontend/react-app
         run: |
-          npm install
+          npm ci
           npx playwright install --with-deps
       - name: Cache pip for E2E
         uses: actions/cache@v4
@@ -132,20 +132,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - name: Ensure Docker and docker-compose plugin
+      - name: Ensure Docker and docker-compose plugin (with retries)
         run: |
           echo "Setting up Docker buildx and QEMU"
-          # Use the GitHub runner's Docker and ensure buildx/qemu are available
-          # Fallback to installing docker-compose plugin only if missing
           docker --version || true
           if ! command -v docker-buildx >/dev/null 2>&1; then
             echo "buildx not found, will rely on setup-buildx-action"
           fi
           if ! docker compose version >/dev/null 2>&1; then
-            echo "docker compose not available; attempting to install plugin"
+            echo "docker compose not available; attempting to install plugin (with retries)"
             sudo apt-get update
-            sudo apt-get install -y docker-compose-plugin || true
+            for i in 1 2 3; do
+              sudo apt-get install -y docker-compose-plugin && break || {
+                echo "install attempt $i failed, retrying..."; sleep 5;
+              }
+            done
           fi
+          # wait for docker daemon to respond
+          for i in {1..10}; do
+            if docker info >/dev/null 2>&1; then
+              echo "docker daemon responsive"; break
+            fi
+            echo "waiting for docker... ($i)"; sleep 2
+          done
           docker --version || true
           docker compose version || true
       - name: Set up QEMU
