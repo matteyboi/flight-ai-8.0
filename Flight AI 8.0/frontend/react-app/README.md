@@ -1,3 +1,25 @@
+# React App
+
+## Overview
+This is the frontend for Flight AI 8.0, built with React and Vite. It includes:
+- Main app components
+- Styles
+- Playwright e2e tests
+
+## Structure
+- src/: React components and styles
+- e2e/: Playwright test specs
+- test-results/: Test output
+- playwright-report/: Test reports
+
+## Setup
+1. Install dependencies with npm or yarn
+2. Run the app with Vite
+3. Execute Playwright tests
+
+## Usage
+Refer to the main project README.md for more details.
+
 # Frontend (React)
 
 This folder contains the React + Vite admin/demo UI used by the project.
@@ -6,8 +28,6 @@ This folder contains the React + Vite admin/demo UI used by the project.
 
 Install deps and run the dev server:
 
-```bash
-cd frontend/react-app
 npm install
 npm run dev
 ```

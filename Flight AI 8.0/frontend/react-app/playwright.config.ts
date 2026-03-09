@@ -27,7 +27,7 @@ export default defineConfig({
       // `npm run preview:e2e` to start the backend and preview together.
       command: 'npm run preview -- --port=5174',
       port: 5174,
-      reuseExistingServer: false,
+        reuseExistingServer: true,
       timeout: 120_000,
     }
   }),
