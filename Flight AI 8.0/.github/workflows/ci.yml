@@ -116,6 +116,23 @@ jobs:
           CI: true
         run: |
           npx playwright test --config=playwright.config.ts
+      - name: Prepare Playwright report artifact
+        if: always()
+        run: |
+          REPORT_DIR=frontend/react-app/playwright-report
+          if [ -d "$REPORT_DIR" ]; then
+            echo "Playwright report exists"
+          else
+            echo "No Playwright report generated; creating placeholder";
+            mkdir -p "$REPORT_DIR"
+            echo "no report" > "$REPORT_DIR/README.txt"
+          fi
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/react-app/playwright-report
 
   e2e-docker:
     name: E2E (docker-compose)
