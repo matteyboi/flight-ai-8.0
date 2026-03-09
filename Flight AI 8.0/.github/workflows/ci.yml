@@ -78,6 +78,7 @@ jobs:
   e2e-tests:
     name: Frontend E2E (Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: frontend-build
     steps:
       - uses: actions/checkout@v4
@@ -94,11 +95,15 @@ jobs:
           key: ${{ runner.os }}-node-playwright-${{ hashFiles('**/frontend/react-app/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-playwright-
-      - name: Install frontend deps and Playwright
+      - name: Install frontend deps and Playwright (with retries)
         working-directory: frontend/react-app
         run: |
           npm ci
-          npx playwright install --with-deps
+          for i in 1 2 3; do
+            npx playwright install --with-deps && break || {
+              echo "playwright install attempt $i failed, retrying..."; sleep 5;
+            }
+          done
       - name: Cache pip for E2E
         uses: actions/cache@v4
         with:
@@ -138,6 +143,7 @@ jobs:
     name: E2E (docker-compose)
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: frontend-build
     steps:
       - uses: actions/checkout@v4
