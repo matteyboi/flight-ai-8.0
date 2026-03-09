@@ -1,5 +1,4 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -17,17 +16,38 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
-        name="index"
+        name="lessons"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Lessons',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />, 
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="stages"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Stages',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="flag.fill" color={color} />, 
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />, 
+        }}
+      />
+      <Tabs.Screen
+        name="procedures"
+        options={{
+          title: 'Procedures',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />, 
+        }}
+      />
+      <Tabs.Screen
+        name="profiles"
+        options={{
+          title: 'Profiles',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.crop.circle.fill" color={color} />, 
         }}
       />
     </Tabs>

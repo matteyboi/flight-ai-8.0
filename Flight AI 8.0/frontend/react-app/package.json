@@ -1,0 +1,22 @@
+{
+  "name": "flight-ai-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "preview:e2e": "bash -lc \"PORT=5051 python3 ../../backend/app.py >/tmp/flight-ai-backend.log 2>&1 & npm run preview -- --port=5174\"",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@playwright/test": "^1.40.0"
+  }
+}
