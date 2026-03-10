@@ -21,6 +21,8 @@ export default function Admin(){
   const [audit, setAudit] = useState([])
   const [deleteId, setDeleteId] = useState('')
   const [outDelete, setOutDelete] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   function isValidLimit(val){
     return Number.isInteger(val) && val > 0
@@ -33,17 +35,34 @@ export default function Admin(){
   async function fetchProgress(){
     if (!isValidLimit(limit)) { alert('Limit must be a positive integer'); return }
     const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}${student?`&student_id=${encodeURIComponent(student)}`:''}`
-    const r = await fetch(`${API_BASE}/admin/progress${qs}`, { headers: authHeaders(user, pass, token) })
-    if (!r.ok) throw new Error('Unauthorized or error: '+r.status)
-    const j = await r.json()
-    setEntries(j.entries||[])
-    setTotal(j.total||0)
+    setLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/admin/progress${qs}`, { headers: authHeaders(user, pass, token) });
+      if (!r.ok) throw new Error('Unauthorized or error: '+r.status);
+      const j = await r.json();
+      setEntries(j.entries||[]);
+      setTotal(j.total||0);
+    } catch (e) {
+      setEntries([]);
+      setTotal(0);
+      setError('Error: '+e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function exportProgress(){
-    const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}${student?`&student_id=${encodeURIComponent(student)}`:''}`
-    const r = await fetch(`${API_BASE}/admin/progress.csv${qs}`, { headers: authHeaders(user, pass, token) })
-    if (!r.ok) { alert('Export failed: '+r.status); return }
+    const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}${student?`&student_id=${encodeURIComponent(student)}`:''}`;
+    setLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/admin/progress.csv${qs}`, { headers: authHeaders(user, pass, token) });
+      if (!r.ok) throw new Error('Export failed: '+r.status);
+      // handle CSV download
+    } catch (e) {
+      alert('Export failed: '+e.message);
+    } finally {
+      setLoading(false);
+    }
     const blob = await r.blob(); const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'progress.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
   }
@@ -78,15 +97,32 @@ export default function Admin(){
 
   async function fetchAudit(){
     const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
-    const r = await fetch(`${API_BASE}/admin/audit${qs}`, { headers: authHeaders(user, pass, token) })
-    if (!r.ok) throw new Error('Audit fetch failed: '+r.status)
-    const j = await r.json(); setAudit(j.entries||[])
+    setLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/admin/audit${qs}`, { headers: authHeaders(user, pass, token) });
+      if (!r.ok) throw new Error('Audit fetch failed: '+r.status);
+      const j = await r.json();
+      setAudit(j.entries||[]);
+    } catch (e) {
+      setAudit([]);
+      setError('Error: '+e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function exportAudit(){
-    const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
-    const r = await fetch(`${API_BASE}/admin/audit.csv${qs}`, { headers: authHeaders(user, pass, token) })
-    if (!r.ok) { alert('Export failed: '+r.status); return }
+    const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`;
+    setLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/admin/audit.csv${qs}`, { headers: authHeaders(user, pass, token) });
+      if (!r.ok) throw new Error('Export failed: '+r.status);
+      // handle CSV download
+    } catch (e) {
+      alert('Export failed: '+e.message);
+    } finally {
+      setLoading(false);
+    }
     const blob = await r.blob(); const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'audit.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
   }

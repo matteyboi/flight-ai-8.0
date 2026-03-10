@@ -10,6 +10,8 @@ test('server CSV export and client CSV download contain created entry', async ({
     data: { student_id: studentId, flight_hours: 3, note: 'csv test' }
   });
   expect(post.ok()).toBeTruthy();
+  // Wait for backend to commit entry
+  await page.waitForTimeout(500);
 
   // Server CSV export via admin endpoint (Basic auth)
   const auth = 'Basic ' + Buffer.from('admin:password').toString('base64');
@@ -20,7 +22,7 @@ test('server CSV export and client CSV download contain created entry', async ({
 
   // Client-side CSV download via UI
   await page.goto('/');
-  await page.click('button:has-text("Admin")');
+  await page.click('[data-testid="admin-tab"]');
   const adminCard = page.locator('div.card', { hasText: 'Admin Credentials' });
   await adminCard.locator('input').nth(0).fill('admin');
   await adminCard.locator('input').nth(1).fill('password');

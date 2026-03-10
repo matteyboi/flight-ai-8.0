@@ -13,11 +13,16 @@ test('admin lists created progress entry', async ({ page, request }) => {
     }
   });
   expect(post.ok()).toBeTruthy();
+  // Wait for backend to commit entry
+  await page.waitForTimeout(500);
 
   // Open admin UI (webServer will have started preview)
   await page.goto('/');
+  // Diagnostic: print navigation container HTML
+  const navHtml = await page.locator('[data-testid="tab-navigation"]').innerHTML();
+  console.log('Navigation container HTML:', navHtml);
   // Navigate to Admin tab
-  await page.click('button:has-text("Admin")');
+  await page.click('[data-testid="admin-tab"]');
   // Fill admin credentials (defaults in backend are admin/password)
   const adminCard = page.locator('div.card', { hasText: 'Admin Credentials' });
   await adminCard.locator('input').nth(0).fill('admin');

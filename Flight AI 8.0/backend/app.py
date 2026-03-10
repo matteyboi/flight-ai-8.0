@@ -70,37 +70,44 @@ def get_syllabus():
 
 @app.route('/lesson', methods=['POST'])
 def generate_lesson():
-    # Placeholder: Integrate with AI API
+    # Modular AI lesson/resource generation
     data = request.json or {}
     topic = data.get('topic', 'unknown')
-    # If OPENAI_API_KEY provided, call the API to generate a short lesson
+    custom = data.get('custom', False)
+    resources = data.get('resources', False)
     api_key = os.environ.get('OPENAI_API_KEY')
-    if api_key:
-        try:
-            openai.api_key = api_key
-            prompt = f"Write a short lesson suitable for a flight student on the topic: {topic}. Keep it concise and actionable."
-            resp = openai.ChatCompletion.create(
-                model=os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo'),
-                messages=[
-                    {"role": "system", "content": "You are a helpful flight instructor."},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=400,
-                n=1,
-                temperature=0.5,
-            )
-            text = ''
-            # Response parsing is defensive to avoid crashes during unexpected shapes
-            if resp and hasattr(resp, 'choices') and len(resp.choices) > 0:
-                choice = resp.choices[0]
-                text = choice.message.get('content') if getattr(choice, 'message', None) else choice.get('text', '')
-            if not text:
-                text = f"Generated lesson for {topic} (empty response)"
-            return jsonify({"lesson": text})
-        except Exception:
-            # On any failure, fall back to placeholder
-            return jsonify({"lesson": f"Generated lesson for {topic} (fallback)"})
-    return jsonify({"lesson": f"Generated lesson for {topic}"})
+    def ai_generate(prompt):
+        if api_key:
+            try:
+                openai.api_key = api_key
+                resp = openai.ChatCompletion.create(
+                    model=os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo'),
+                    messages=[
+                        {"role": "system", "content": "You are a helpful flight instructor."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=400,
+                    n=1,
+                    temperature=0.5,
+                )
+                text = ''
+                if resp and hasattr(resp, 'choices') and len(resp.choices) > 0:
+                    choice = resp.choices[0]
+                    text = choice.message.get('content') if getattr(choice, 'message', None) else choice.get('text', '')
+                return text or "(empty response)"
+            except Exception:
+                return "(fallback AI response)"
+        return "(no AI key configured)"
+    lesson_prompt = f"Write a short lesson suitable for a flight student on the topic: {topic}. Keep it concise and actionable."
+    lesson = ai_generate(lesson_prompt)
+    result = {"lesson": lesson}
+    if custom:
+        custom_prompt = f"Customize the lesson for a student with unique needs: {topic}."
+        result["customized"] = ai_generate(custom_prompt)
+    if resources:
+        resource_prompt = f"Suggest study materials and resources for learning about: {topic}."
+        result["resources"] = ai_generate(resource_prompt)
+    return jsonify(result)
 
 
 @app.route('/progress', methods=['POST'])
@@ -112,8 +119,9 @@ def track_progress():
     entry = Progress(student_id=student_id, data=json.dumps(data))
     session.add(entry)
     session.commit()
+    print(f"Created progress entry: id={entry.id}, student_id={student_id}, data={data}")
     session.close()
-    return jsonify({"progress": f"Progress updated for {student_id}"})
+    return jsonify({"status": "success", "student_id": student_id, "progress": data})
 
 
 @app.route('/admin/progress', methods=['GET'])
@@ -136,6 +144,7 @@ def list_progress():
         q = q.filter(Progress.student_id == student_filter)
     total = q.count()
     entries = q.order_by(Progress.timestamp.desc()).offset(offset).limit(limit).all()
+    print(f"Admin listing: student_id={student_filter}, found={len(entries)} entries")
     result = []
     for e in entries:
         try:

@@ -13,6 +13,8 @@ test('admin can delete progress entry and audit is recorded', async ({ page, req
     }
   });
   expect(post.ok()).toBeTruthy();
+  // Wait for backend to commit entry
+  await page.waitForTimeout(500);
 
   // Fetch via admin API to obtain the entry id (use Basic auth)
   const authHeader = 'Basic ' + Buffer.from('admin:password').toString('base64');
@@ -24,7 +26,7 @@ test('admin can delete progress entry and audit is recorded', async ({ page, req
 
   // Open UI and delete via Admin card
   await page.goto('/');
-  await page.click('button:has-text("Admin")');
+  await page.click('[data-testid="admin-tab"]');
   const adminCard = page.locator('div.card', { hasText: 'Admin Credentials' });
   await adminCard.locator('input').nth(0).fill('admin');
   await adminCard.locator('input').nth(1).fill('password');
