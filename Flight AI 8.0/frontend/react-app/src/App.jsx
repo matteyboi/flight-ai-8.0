@@ -155,7 +155,7 @@ export default function App() {
       // Save button: ratingsObj
       const ratingsObj = taskOrRatings;
       let workedTasks = [];
-      setStages(prevStages => prevStages.map(stage => {
+      setStages(prevStages => prevStages.map((stage, idx, arr) => {
         if (stage.id !== stageId) return stage;
         let tasks = stage.tasks.map(task => {
           const newRating = ratingsObj[task.id];
@@ -168,8 +168,8 @@ export default function App() {
           });
           return { ...task, rating: newRating };
         });
-        // Stage complete if all tasks rated
-        const completed = tasks.every(t => t.rating !== undefined);
+        // Only mark stage complete if all tasks are rated 4 or 5
+        const completed = tasks.every(t => t.rating === 4 || t.rating === 5);
         // Move 4-rated tasks to bottom
         tasks = [...tasks.filter(t => t.rating !== 4), ...tasks.filter(t => t.rating === 4)];
         return { ...stage, tasks, completed };
@@ -194,8 +194,8 @@ export default function App() {
           if (task.id !== taskOrRatings) return task;
           return { ...task, rating };
         });
-        // Stage complete if all tasks rated 5
-        const completed = tasks.every(t => t.rating === 5);
+        // Stage complete if all tasks rated 4 or 5
+        const completed = tasks.every(t => t.rating === 4 || t.rating === 5);
         // Move 4-rated tasks to bottom
         tasks = [...tasks.filter(t => t.rating !== 4), ...tasks.filter(t => t.rating === 4)];
         return { ...stage, tasks, completed };

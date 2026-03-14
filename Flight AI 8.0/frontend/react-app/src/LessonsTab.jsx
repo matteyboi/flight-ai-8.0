@@ -15,63 +15,96 @@ const styles = {
 function LessonsTab({ currentStage, onTaskRating, studentId, stages }) {
   const [notes, setNotes] = useState('');
   const [unsavedRatings, setUnsavedRatings] = useState({});
-  if (!stages || stages.length === 0) return <div style={{color:'#d32f2f',fontSize:18,padding:'32px'}}>No course data available.</div>;
-  if (!currentStage || !currentStage.tasks || currentStage.tasks.length === 0) return <div style={{color:'#d32f2f',fontSize:18,padding:'32px'}}>No tasks available for this stage.</div>;
-  const displayRatings = currentStage.tasks;
+  const [prevScores, setPrevScores] = useState({});
+  const [justSaved, setJustSaved] = useState(false);
+
+  // Load previous scores from localStorage on mount
+  React.useEffect(() => {
+    const key = `lessonScores_${studentId}_${currentStage?.id}`;
+    const stored = window.localStorage.getItem(key);
+    if (stored) {
+      setPrevScores(JSON.parse(stored));
+    }
+    setJustSaved(false);
+  }, [studentId, currentStage?.id]);
+
+  // Save scores to localStorage after save
+  const handleSave = () => {
+    if (Object.keys(unsavedRatings).length > 0) {
+      onTaskRating(currentStage.id, { ...unsavedRatings, notes });
+      // Merge new ratings into prevScores and save
+      const newScores = { ...prevScores, ...unsavedRatings };
+      setPrevScores(newScores);
+      const key = `lessonScores_${studentId}_${currentStage?.id}`;
+      window.localStorage.setItem(key, JSON.stringify(newScores));
+      setUnsavedRatings({});
+      setNotes('');
+      setJustSaved(true);
+    }
+  };
+
+  // Only show tasks that have not been rated 5 (mastered), but only filter after save
+  let displayRatings = currentStage.tasks;
+  if (justSaved) {
+    // After save, use only prevScores (persisted) to filter out tasks rated 5
+    displayRatings = currentStage.tasks.filter(task => {
+      const score = prevScores[task.id] !== undefined ? prevScores[task.id] : task.rating;
+      return score !== 5;
+    });
+  }
   return (
     <div>
       <div className="stage-name">{currentStage ? currentStage.name : ''}</div>
-      {displayRatings.map(task => (
-        <div key={task.id} className="task-row">
-          <span className="task-name">{task.name}</span>
-          {task.farsAcs && (
-            <a href={task.farsAcs.url} target="_blank" rel="noopener noreferrer" className="task-link">
-              {task.farsAcs.text}
-            </a>
-          )}
-          <span className="rating">
-            {[1,2,3,4,5].map(r => (
-              <button
-                key={r}
-                className={((unsavedRatings[task.id] === r || (!unsavedRatings[task.id] && task.rating === r)) ? 'selected' : '')}
-                onClick={() => {
-                  setUnsavedRatings(ratings => {
-                    if (ratings[task.id] === r) {
-                      const updated = { ...ratings };
-                      delete updated[task.id];
-                      return updated;
-                    }
-                    if (!ratings[task.id] && task.rating === r) {
-                      return { ...ratings, [task.id]: 0 };
-                    }
-                    return { ...ratings, [task.id]: r };
-                  });
-                }}
-                disabled={false}
-              >{r}</button>
-            ))}
-          </span>
-        </div>
-      ))}
-      <button className="button" onClick={() => {
-        // Only call onTaskRating if at least one rating is set
-          if (Object.keys(unsavedRatings).length > 0) {
-            onTaskRating(currentStage.id, { ...unsavedRatings, notes });
-            setUnsavedRatings({});
-            setNotes(''); // Clear notes box
-          }
-        }}>Save Ratings</button>
-        <div className="card notes-box">
-          <div className="notes-header">Notes</div>
-          <textarea
-            className="notes-input"
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Enter notes here..."
-          />
-        </div>
+      {displayRatings.map(task => {
+        const lastScore = unsavedRatings[task.id] !== undefined ? unsavedRatings[task.id] : (prevScores[task.id] !== undefined ? prevScores[task.id] : task.rating);
+        return (
+          <div key={task.id} className="task-row">
+            <span className="task-name">{task.name}</span>
+            {task.farsAcs && (
+              <a href={task.farsAcs.url} target="_blank" rel="noopener noreferrer" className="task-link">
+                {task.farsAcs.text}
+              </a>
+            )}
+            <span className="rating">
+              {[1,2,3,4,5].map(r => {
+                // Show previous score in grey if it matches lastScore and not just selected
+                const isPrev = prevScores[task.id] === r && lastScore === r && unsavedRatings[task.id] === undefined;
+                const isSelected = unsavedRatings[task.id] === r;
+                return (
+                  <button
+                    key={r}
+                    className={isSelected ? 'selected' : isPrev ? 'prev-score' : ''}
+                    style={isPrev ? { background: '#eee', color: '#888', border: '1px solid #bbb' } : {}}
+                    onClick={() => {
+                      setUnsavedRatings(ratings => {
+                        if (ratings[task.id] === r) {
+                          const updated = { ...ratings };
+                          delete updated[task.id];
+                          return updated;
+                        }
+                        return { ...ratings, [task.id]: r };
+                      });
+                    }}
+                    disabled={false}
+                  >{r}</button>
+                );
+              })}
+            </span>
+          </div>
+        );
+      })}
+      <button className="button" onClick={handleSave}>Save Ratings</button>
+      <div className="card notes-box">
+        <div className="notes-header">Notes</div>
+        <textarea
+          className="notes-input"
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Enter notes here..."
+        />
       </div>
-    );
-  }
+    </div>
+  );
+}
 export default LessonsTab;
 // ...existing code...
