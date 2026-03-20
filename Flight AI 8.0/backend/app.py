@@ -440,3 +440,4 @@ if __name__ == '__main__':
     _validate_startup_config()
     port = int(os.environ.get('PORT', 5050))
     app.run(debug=True, port=port)
+#MARKER-RESET-TEST-2026-FORCE-TOUCH

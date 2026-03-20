@@ -127,6 +127,22 @@ export default function Admin(){
     const a = document.createElement('a'); a.href = url; a.download = 'audit.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
   }
 
+  async function handleReset() {
+    if (!window.confirm('Reset all student progress? This cannot be undone.')) return;
+    setLoading(true);
+    setError('');
+    try {
+      const r = await fetch(`${API_BASE}/admin/reset`, { method: 'POST', headers: authHeaders(user, pass, token) });
+      if (!r.ok) throw new Error('Reset failed: ' + r.status);
+      alert('All student progress has been reset.');
+      await fetchProgress();
+    } catch (e) {
+      setError('Reset error: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div>
       <div className="card">
@@ -141,6 +157,7 @@ export default function Admin(){
 
       <div className="card">
         <h3>View Progress</h3>
+        <button onClick={handleReset} style={{float:'right',background:'#f55',color:'#fff',marginBottom:8}}>Reset All Student Progress</button>
         <label>Limit</label>
         <input value={limit} onChange={e=>setLimit(Number(e.target.value||0))} style={{width:120}} />
         <label style={{marginLeft:12}}>Student</label>
@@ -153,6 +170,7 @@ export default function Admin(){
           <button onClick={exportProgressClient} style={{marginLeft:8}}>Export CSV (client)</button>
         </div>
         <div style={{marginTop:8}}>Total: {total} — Offset: {offset}</div>
+        {error && <div style={{color:'red',marginTop:8}}>{error}</div>}
         {entries && entries.length>0 ? (
           <table className="data-table" style={{width:'100%',marginTop:8}}>
             <thead>
