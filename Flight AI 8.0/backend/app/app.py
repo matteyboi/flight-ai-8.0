@@ -1,14 +1,12 @@
-# Copy of app.py to bypass Docker/Python import bug
-# Ensure create_app is exported for Gunicorn
-__all__ = ["create_app"]
+# DEBUG: Print file path to confirm which app.py is loaded
+print('[DEBUG] Loading backend/main_app.py:', __file__)
+__all__ = ["create_app", "app"]
 
 # --- Imports ---
-# UNIQUE_MARKER_20260320_DO_NOT_REMOVE
 import os
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from functools import wraps
@@ -18,10 +16,12 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, Foreign
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.sql import func
 
+# --- SQLAlchemy Setup ---
 Base = declarative_base()
 engine = create_engine('sqlite:///progress.db')
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# --- Models ---
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
@@ -51,11 +51,12 @@ class Audit(Base):
     user_id = Column(Integer)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
+# --- Flask App Factory ---
 def create_app():
     app = Flask(__name__)
     CORS(app)
-    Talisman(app)
-    limiter = Limiter(app, key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+    limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+    limiter.init_app(app)
     load_dotenv()
     serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'dev-secret'))
 
@@ -92,7 +93,6 @@ def create_app():
             print('[DEBUG] Registered routes:', routes)
         except Exception as e:
             print('[DEBUG] Could not list routes:', e)
-    _print_registered_routes()
 
     @app.before_request
     def handle_options():
@@ -192,7 +192,11 @@ def create_app():
     @app.route('/progress', methods=['POST'])
     def track_progress():
         data = request.json or {}
-        student_id = data.get('student_id', 'unknown')
+        print(f"[DEBUG] /progress POST received: {data}")
+        student_id = data.get('student_id')
+        if not student_id:
+            print("[ERROR] /progress POST missing student_id!")
+            return jsonify({'error': 'student_id required'}), 400
         management_id = data.get('management_id', None)
         session = SessionLocal()
         entry = Progress(student_id=student_id, management_id=management_id, data=json.dumps(data))
@@ -252,5 +256,8 @@ def create_app():
             data = entry.data
         return jsonify({'progress': data})
 
+    _print_registered_routes()
     return app
 
+app = create_app()
+globals()['app'] = app

@@ -4,6 +4,7 @@ const skipWebServer = !!process.env.E2E_SKIP_WEBSERVER;
 const baseURL = process.env.E2E_BASE_URL || 'http://localhost:5174';
 
 export default defineConfig({
+  globalSetup: require.resolve('./playwright.global-setup'),
   testDir: './e2e',
   timeout: 30_000,
   expect: { timeout: 5000 },
@@ -16,6 +17,7 @@ export default defineConfig({
     actionTimeout: 5000,
     ignoreHTTPSErrors: true,
     baseURL,
+    permissions: ['clipboard-read', 'clipboard-write', 'geolocation', 'notifications', 'camera', 'microphone', 'midi', 'background-sync', 'ambient-light-sensor', 'payment-handler'],
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

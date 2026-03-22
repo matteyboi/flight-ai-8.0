@@ -12,8 +12,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+
+# Remove all Python cache files before copying code
+RUN find . -name "__pycache__" -type d -exec rm -rf {} + && find . -name "*.pyc" -delete
+
 # Copy backend code
 COPY . /app
+# Copy test files from project root into image
+COPY ../tests /app/tests
 
 ENV PORT=5050
 EXPOSE 5050

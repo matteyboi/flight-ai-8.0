@@ -1,2 +1,2 @@
-from app2 import create_app
+from app.app import create_app
 application = create_app()

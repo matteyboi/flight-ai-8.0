@@ -10,37 +10,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 import datetime
 import os
 import json
-from functools import wraps
-import sys
-import base64
-import csv
-from io import StringIO
-import csv
-from io import StringIO
-
-app = Flask(__name__)
-CORS(app)
-Talisman(app, content_security_policy=None, force_https=False)
-
-# Rate limiter: support Redis-backed storage in production via `RATELIMIT_STORAGE_URL` or `REDIS_URL`.
-limiter_storage = os.environ.get('RATELIMIT_STORAGE_URL') or os.environ.get('REDIS_URL')
-if limiter_storage:
-    # If a storage URI is provided, initialize the limiter with it (e.g. redis://...)
-    limiter = Limiter(key_func=get_remote_address, storage_uri=limiter_storage, app=app, default_limits=[])
-else:
-    # Fallback to in-memory storage (not recommended for production)
-    limiter = Limiter(key_func=get_remote_address, app=app, default_limits=[])
-
-# Load environment variables from project .env (if present)
-# Prefer a top-level .env (one level above `backend/`) so project-wide vars live there.
-root_env = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(root_env)
-
-# SQLite DB for simple progress persistence
-DB_PATH = os.path.join(os.path.dirname(__file__), 'progress.db')
-engine = create_engine(f'sqlite:///{DB_PATH}', connect_args={"check_same_thread": False})
-Base = declarative_base()
-
+    return jsonify({"lesson": f"Generated lesson for {topic}"})
 class Progress(Base):
     __tablename__ = 'progress'
     id = Column(Integer, primary_key=True)
@@ -70,44 +40,37 @@ def get_syllabus():
 
 @app.route('/lesson', methods=['POST'])
 def generate_lesson():
-    # Modular AI lesson/resource generation
+    # Placeholder: Integrate with AI API
     data = request.json or {}
     topic = data.get('topic', 'unknown')
-    custom = data.get('custom', False)
-    resources = data.get('resources', False)
+    # If OPENAI_API_KEY provided, call the API to generate a short lesson
     api_key = os.environ.get('OPENAI_API_KEY')
-    def ai_generate(prompt):
-        if api_key:
-            try:
-                openai.api_key = api_key
-                resp = openai.ChatCompletion.create(
-                    model=os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo'),
-                    messages=[
-                        {"role": "system", "content": "You are a helpful flight instructor."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    max_tokens=400,
-                    n=1,
-                    temperature=0.5,
-                )
-                text = ''
-                if resp and hasattr(resp, 'choices') and len(resp.choices) > 0:
-                    choice = resp.choices[0]
-                    text = choice.message.get('content') if getattr(choice, 'message', None) else choice.get('text', '')
-                return text or "(empty response)"
-            except Exception:
-                return "(fallback AI response)"
-        return "(no AI key configured)"
-    lesson_prompt = f"Write a short lesson suitable for a flight student on the topic: {topic}. Keep it concise and actionable."
-    lesson = ai_generate(lesson_prompt)
-    result = {"lesson": lesson}
-    if custom:
-        custom_prompt = f"Customize the lesson for a student with unique needs: {topic}."
-        result["customized"] = ai_generate(custom_prompt)
-    if resources:
-        resource_prompt = f"Suggest study materials and resources for learning about: {topic}."
-        result["resources"] = ai_generate(resource_prompt)
-    return jsonify(result)
+    if api_key:
+        try:
+            openai.api_key = api_key
+            prompt = f"Write a short lesson suitable for a flight student on the topic: {topic}. Keep it concise and actionable."
+            resp = openai.ChatCompletion.create(
+                model=os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo'),
+                messages=[
+                    {"role": "system", "content": "You are a helpful flight instructor."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=400,
+                n=1,
+                temperature=0.5,
+            )
+            text = ''
+            # Response parsing is defensive to avoid crashes during unexpected shapes
+            if resp and hasattr(resp, 'choices') and len(resp.choices) > 0:
+                choice = resp.choices[0]
+                text = choice.message.get('content') if getattr(choice, 'message', None) else choice.get('text', '')
+            if not text:
+                text = f"Generated lesson for {topic} (empty response)"
+            return jsonify({"lesson": text})
+        except Exception:
+            # On any failure, fall back to placeholder
+            return jsonify({"lesson": f"Generated lesson for {topic} (fallback)"})
+    return jsonify({"lesson": f"Generated lesson for {topic}"})
 
 
 @app.route('/progress', methods=['POST'])
@@ -119,9 +82,8 @@ def track_progress():
     entry = Progress(student_id=student_id, data=json.dumps(data))
     session.add(entry)
     session.commit()
-    print(f"Created progress entry: id={entry.id}, student_id={student_id}, data={data}")
     session.close()
-    return jsonify({"status": "success", "student_id": student_id, "progress": data})
+    return jsonify({"progress": f"Progress updated for {student_id}"})
 
 
 @app.route('/admin/progress', methods=['GET'])
@@ -144,7 +106,6 @@ def list_progress():
         q = q.filter(Progress.student_id == student_filter)
     total = q.count()
     entries = q.order_by(Progress.timestamp.desc()).offset(offset).limit(limit).all()
-    print(f"Admin listing: student_id={student_filter}, found={len(entries)} entries")
     result = []
     for e in entries:
         try:
@@ -440,4 +401,3 @@ if __name__ == '__main__':
     _validate_startup_config()
     port = int(os.environ.get('PORT', 5050))
     app.run(debug=True, port=port)
-#MARKER-RESET-TEST-2026-FORCE-TOUCH

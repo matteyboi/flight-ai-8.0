@@ -5,6 +5,7 @@ sqlalchemy
 
 flask-cors
 gunicorn
+pytest
 python-dotenv
 flask-limiter
 flask-talisman

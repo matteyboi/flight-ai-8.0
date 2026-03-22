@@ -127,7 +127,7 @@ docker-compose build
 docker-compose up
 ```
 
- - This exposes the backend at `http://localhost:5051` and frontend at `http://localhost:8000` by default.
+ - This exposes the backend at `http://localhost:5051` and frontend at `http://localhost:8001` by default.
 
 Docker compose notes
 - The `frontend` service expects a built frontend in `frontend/react-app/dist` to be present. Build it with:

@@ -1,4 +1,4 @@
-version: '3.8'
+  # version attribute removed as per Docker Compose recommendations
 
 services:
   redis:
@@ -9,7 +9,7 @@ services:
 
   backend:
     build:
-      context: ./backend-new
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "5051:5050"
