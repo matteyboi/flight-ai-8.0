@@ -16,6 +16,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - name: Install flake8
+        run: pip install flake8
+      - name: Lint backend (flake8)
+        run: flake8 backend
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -27,9 +31,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-      - name: Run pytest
+      - name: Run pytest with coverage
         run: |
-          pytest -q
+          pytest --cov=backend/app --cov-report=xml
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: backend
+      - name: Run Bandit security scan
+        run: bandit -r backend
 
   frontend-build:
     name: Frontend build
@@ -41,6 +52,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+      - name: Lint frontend (ESLint)
+        working-directory: frontend/react-app
+        run: npx eslint .
+      - name: Format check frontend (Prettier)
+        working-directory: frontend/react-app
+        run: npx prettier --check .
       - name: Cache Node modules
         uses: actions/cache@v4
         with:
@@ -56,6 +73,14 @@ jobs:
         working-directory: frontend/react-app
         run: |
           npm run build
+      - name: Run frontend tests with coverage
+        working-directory: frontend/react-app
+        run: npx jest --coverage --ci --reporters=default --reporters=jest-junit
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          flags: frontend
+          directory: frontend/react-app/coverage
       - name: Install backend deps for E2E
         run: |
           python -m pip install --upgrade pip
